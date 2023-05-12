@@ -17,16 +17,21 @@ class AddFragmentViewModel @Inject constructor(
     private val addNoteUseCase: AddNoteUseCase
 ) : AndroidViewModel(application) {
 
-    fun addNote(text: String) : Boolean {
+    fun addNote(text: String, date: String, time: String) : Boolean {
+        val dateEnd = if ("Date" in date) null else date
+        val timeEnd = if ("Time" in time) null else time
         val item = Note(
-            text = text
+            text = text,
+            dateEnd = dateEnd,
+            timeEnd = timeEnd
         )
-        if (item.dateEnd != null) {
+        if (item.dateEnd != null && item.timeEnd != null) {
             WorkManager.getInstance(application).enqueue(
                NotificationWorker.makeRequest(
                    item.text,
                    item.id,
-                   item.dateEnd
+                   item.dateEnd!!,
+                   item.timeEnd!!,
                )
             )
         }

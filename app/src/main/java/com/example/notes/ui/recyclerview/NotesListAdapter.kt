@@ -30,7 +30,6 @@ class NotesListAdapter(
     }
 
     class NoteItemViewHolder(private val binding: ItemBinding) : ViewHolder(binding.root) {
-
         fun bind(item: Note) {
             binding.etText.setText(item.text)
         }

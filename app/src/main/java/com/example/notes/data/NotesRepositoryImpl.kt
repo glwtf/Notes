@@ -12,18 +12,10 @@ import javax.inject.Singleton
 @Singleton
 class NotesRepositoryImpl @Inject constructor() : NotesRepository {
 
-    init {
-        countRef.get().addOnSuccessListener {
-            if (it.value != null)
-                globalId = it.value as Long
-        }
-    }
-
     override fun addNote(noteItem: Note) : Boolean {
-        noteItem.id = globalId
-        val result = dataBaseReference.child(noteItem.id.toString()).setValue(noteItem)
-        globalId++
-        countRef.setValue(globalId)
+        val newItem = dataBaseReference.push()
+        noteItem.id = newItem.key
+        val result = newItem.setValue(noteItem)
         return result.isSuccessful
     }
 
@@ -51,10 +43,7 @@ class NotesRepositoryImpl @Inject constructor() : NotesRepository {
     override fun getFirebaseDbRef() = dataBaseReference
 
     companion object {
-        private const val COUNT_CHILD = "count"
         private val firebaseDb = Firebase.database
         val dataBaseReference = firebaseDb.reference.child(Note.NOTE_CHILD)
-        private val countRef = firebaseDb.reference.child(COUNT_CHILD)
-        private var globalId = 0L
     }
 }

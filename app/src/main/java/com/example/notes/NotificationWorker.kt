@@ -13,6 +13,7 @@ import com.example.notes.domain.Note
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
@@ -24,14 +25,14 @@ class NotificationWorker(
 
     override fun doWork(): Result {
         val textNote = workerParams.inputData.getString(TEXT_NOTE) ?: ""
-        val noteId = workerParams.inputData.getLong(NOTE_ID, Note.UNSPECIFIED_ID)
-        if (noteId != Note.UNSPECIFIED_ID || textNote != "") {
+        val noteId = workerParams.inputData.getString(NOTE_ID) ?: ""
+        if (noteId != null || textNote != "") {
             showNotification(textNote, noteId)
         }
         return Result.success()
     }
 
-    private fun showNotification(textContent: String, noteId: Long) {
+    private fun showNotification(textContent: String, noteId: String) {
 
         val channel = NotificationChannel(
             CHANNEL_ID,
@@ -59,19 +60,28 @@ class NotificationWorker(
         private const val CHANNEL_NAME = "new notes"
         private const val CHANNEL_ID = "note"
 
-        private fun getDuration(date: String?): Long {
-            val formatter =
-                DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss z yyyy", Locale.ENGLISH)
-            val localDate = LocalDateTime.parse(date, formatter)
-            val noteDate = localDate.atOffset(ZoneOffset.UTC).toInstant().toEpochMilli()
-            return noteDate - System.currentTimeMillis()
+        private fun getDuration(date: String, time: String): Long {
+            val dateList = date.split(".").map {
+                it.toInt()
+            }
+            val timeList = time.split(":").map {
+                it.toInt()
+            }
+            val noteDateCalendar = Calendar.getInstance()
+            noteDateCalendar.set(
+                dateList[2], dateList[1]-1, dateList[0]
+            )
+            noteDateCalendar.set(Calendar.HOUR, timeList[0])
+            noteDateCalendar.set(Calendar.MINUTE, timeList[1])
+            return noteDateCalendar.timeInMillis - System.currentTimeMillis()
         }
         fun makeRequest(
             textNote: String?,
-            noteId: Long?,
-            date: String?
+            noteId: String?,
+            date: String,
+            time: String
         ): OneTimeWorkRequest {
-            val duration = getDuration(date)
+            val duration = getDuration(date, time)
             return OneTimeWorkRequestBuilder<NotificationWorker>()
                 .setInputData(workDataOf(
                     TEXT_NOTE to textNote,
