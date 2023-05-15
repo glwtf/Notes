@@ -1,11 +1,13 @@
 package com.example.notes.ui.viewmodel
 
+import android.app.AlarmManager
 import android.app.Application
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
-import androidx.work.WorkManager
-import com.example.notes.NotificationWorker
+import com.example.notes.NotificationBroadcast
 import com.example.notes.domain.Note
 import com.example.notes.domain.usecase.AddNoteUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,24 +19,34 @@ class AddFragmentViewModel @Inject constructor(
     private val addNoteUseCase: AddNoteUseCase
 ) : AndroidViewModel(application) {
 
-    fun addNote(text: String, date: String, time: String) : Boolean {
-        val dateEnd = if ("Date" in date) null else date
-        val timeEnd = if ("Time" in time) null else time
+    fun addNote(text: String, planTimeMillis: Long?) {
         val item = Note(
             text = text,
-            dateEnd = dateEnd,
-            timeEnd = timeEnd
+            planTimeMillis = planTimeMillis
         )
-        if (item.dateEnd != null && item.timeEnd != null) {
-            WorkManager.getInstance(application).enqueue(
-               NotificationWorker.makeRequest(
-                   item.text,
-                   item.id,
-                   item.dateEnd!!,
-                   item.timeEnd!!,
-               )
-            )
+        addNoteUseCase(item)
+        planTimeMillis?.let {
+            scheduleNotification(item)
         }
-        return addNoteUseCase(item)
+    }
+
+    private fun scheduleNotification(item: Note) {
+        val intent = Intent(application, NotificationBroadcast::class.java)
+        val noteId = item.id?.toByteArray()?.sum() ?: 1
+        intent.putExtra(NotificationBroadcast.TEXT_NOTE, item.text)
+        intent.putExtra(NotificationBroadcast.NOTE_ID, noteId)
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            application,
+            noteId,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val alarmManager = application.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            item.planTimeMillis!!,
+            pendingIntent
+        )
     }
 }

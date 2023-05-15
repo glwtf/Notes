@@ -28,7 +28,7 @@ class NotesRepositoryImpl @Inject constructor() : NotesRepository {
         val mapNote = mapOf(
             "id" to noteItem.id,
             "text" to noteItem.text,
-            "dateEnd" to noteItem.dateEnd,
+            "planTimeMillis" to noteItem.planTimeMillis,
             "repeat" to noteItem.repeat,
             "isComplete" to noteItem.isComplete
         )
